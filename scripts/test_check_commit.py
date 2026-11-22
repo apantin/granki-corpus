@@ -14,6 +14,12 @@ def csv_bytes(fields, records):
 
 
 class CheckTest(unittest.TestCase):
+    def test_texts_also_checked_for_private_patterns(self):
+        data=b'contact: author@example.com'
+        row=dict.fromkeys(FIELDS,'value')
+        row.update(path='texts/t.md',raw_path='texts/t.raw.md',source_url='https://example.org/article',
+                   license='CC-BY-4.0',split='scouting',sha256=hashlib.sha256(data).hexdigest(),raw_sha256=hashlib.sha256(data).hexdigest())
+        self.assertTrue(validate({'manifest.csv':csv_bytes(FIELDS,[row]),row['path']:data,row['raw_path']:data}))
     def test_missing_new_fields_and_unregistered(self):
         self.assertTrue(validate({'manifest.csv': b'path,license\n'}))
         self.assertTrue(validate({'manifest.csv': csv_bytes(FIELDS, []), 'texts/x.md': b'x'}))

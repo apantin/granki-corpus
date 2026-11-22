@@ -86,7 +86,7 @@ def validate(blobs: dict[str, bytes]) -> list[str]:
             problems.append(f'{path}: файл без записи в манифесте')
         if len(data) > 5 * 1024 * 1024:
             problems.append(f'{path}: больше 5 МБ')
-        if top not in {'texts', 'pairs'} and path not in {'scripts/check_commit.py', 'scripts/test_check_commit.py'}:
+        if path not in {'scripts/check_commit.py', 'scripts/test_check_commit.py'}:
             if PRIVATE.search(data.decode('utf-8', 'ignore')):
                 problems.append(f'{path}: локальный путь или почта')
     return problems
