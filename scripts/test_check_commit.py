@@ -54,6 +54,18 @@ class CheckTest(unittest.TestCase):
             bad = pair | {field: ''}
             self.assertTrue(validate(blobs | {'pairs/manifest.csv': csv_bytes(PAIR_FIELDS, [bad])}))
 
+    def test_diagnostic_legacy_cannot_be_primary_or_quality(self):
+        content=b'x';pair=dict.fromkeys(PAIR_FIELDS,'value')
+        pair.update(license='CC-BY-4.0',split='scouting',purpose='diagnostic-only',primary='no',label='construction-mixed-axes-legacy')
+        blobs={'manifest.csv':csv_bytes(FIELDS,[])}
+        for side in ('worse','better'):
+            for raw in ('','_raw'):
+                path=f'pairs/source/{side}{raw}.md';pair[f'{side}{raw}_path']=path
+                pair[f'{side}{raw}_sha256']=hashlib.sha256(content).hexdigest();blobs[path]=content
+        self.assertEqual(validate(blobs|{'pairs/manifest.csv':csv_bytes(PAIR_FIELDS,[pair])}),[])
+        for changed in [dict(primary='yes'),dict(purpose='quality')]:
+            self.assertTrue(validate(blobs|{'pairs/manifest.csv':csv_bytes(PAIR_FIELDS,[pair|changed])}))
+
 
 if __name__ == '__main__':
     unittest.main()
