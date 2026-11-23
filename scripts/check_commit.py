@@ -72,6 +72,10 @@ def validate(blobs: dict[str, bytes]) -> list[str]:
             problems.append('pairs/manifest.csv: неверная лицензия или часть')
         if row['purpose'] == 'neutral-control' and not row['neutrality_reason']:
             problems.append('pairs/manifest.csv: нет основания нейтральности')
+        if row['purpose']=='diagnostic-only' and row['primary']!='no':
+            problems.append('pairs/manifest.csv: диагностическая пара не может быть основной')
+        if row.get('label')=='construction-mixed-axes-legacy' and row['purpose']!='diagnostic-only':
+            problems.append('pairs/manifest.csv: смешанная legacy-порча не допускается как контроль качества')
         if row['pair_id'] in seen:
             problems.append('pairs/manifest.csv: повтор ID')
         seen.add(row['pair_id'])
