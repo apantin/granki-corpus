@@ -12,6 +12,15 @@ SOURCES={
 NS={'s':'http://www.sitemaps.org/schemas/sitemap/0.9'}
 
 
+def provenance_warning(text):
+    """Сигнал для консервативного отбора, не юридический вывод о правах."""
+    plain=re.sub(r'[*_`]+','',text)
+    if re.search(r'(?im)^\s*(?:источник|публикация)\s*:\s*\S',plain):return 'external-publication-credit'
+    if re.search(r'(?i)\bперев[её]л(?:а|и)?\b[^\n.]{0,100}\b(?:статью|текст|материал)\b',plain):return 'explicit-translation'
+    if re.search(r'(?i)\bперепечат(?:ано|ка)\b|\bперевод\s*[:—]',plain):return 'explicit-reprint-or-translation'
+    return ''
+
+
 def discover_urls(fetch,source,*,maps=8,supplied_urls=None):
     """Детерминированный порядок public-v1, кэш/robots/темп обеспечивает fetch.get."""
     site=SOURCES[source]['site'];urls=[];stats=Counter()
@@ -33,7 +42,7 @@ def discover_urls(fetch,source,*,maps=8,supplied_urls=None):
     return sorted(set(urls),key=lambda value:hashlib.sha256(('public-v1'+value).encode()).digest()),stats
 
 
-def extract_candidate(payload,url,source,*,cleaner,features):
+def extract_candidate(payload,url,source,*,cleaner,features,strict_provenance=False):
     """Проверки public-v1; cleaner/features — общая реализация из granki-bench.
 
     Найденный CC-маркер не доказывает отсутствия исключения у конкретной статьи.
@@ -44,6 +53,7 @@ def extract_candidate(payload,url,source,*,cleaner,features):
     if spec['license_pattern'] not in payload.decode('utf-8','replace'):return None,'no_license'
     clean,meta=cleaner(payload,url);meta=dict(meta);ft=features(clean.norm)
     if ft['words']<150 or ft['cyrillic']<.65:return None,'preliminary_filter'
+    if strict_provenance and (warning:=provenance_warning(clean.raw)):return None,warning
     if re.search(r'(?i)(перевод\s*[:—]|перев[её]л[а]?\s*[:—]|источник\s*:\s*https?://|перепечатано)',clean.raw):return None,'translation_or_reprint'
     author=meta.get('author') or ''
     if not author and source=='zavtra':

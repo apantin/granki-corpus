@@ -6,7 +6,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 sys.path.insert(0,str(Path(__file__).parent/'collect'))
-from articles import discover_urls,extract_candidate,SOURCES
+from articles import discover_urls,extract_candidate,SOURCES,provenance_warning
 from fetch import Fetcher
 
 
@@ -34,6 +34,19 @@ class CollectorTest(unittest.TestCase):
             path=Path(folder)/(hashlib.sha256(url.encode()).hexdigest()+'.html');path.write_bytes(payload)
             with patch('fetch.urlopen',side_effect=AssertionError('network request')):
                 fetch=Fetcher(Path(folder));self.assertEqual(fetch.get(url),payload);self.assertEqual(fetch.bytes,0)
+
+    def test_strict_provenance_rejects_external_credits_and_natural_translation(self):
+        samples=['Корреспондент перевела статью эксперта, опубликованную в другом журнале.',
+                 'Текст.\nПубликация: Другое издание', 'Текст.\n*Источник: *Внешний журнал']
+        payload=SOURCES['zavtra']['license_pattern'].encode()
+        for text in samples:
+            def cleaner(payload,url):return SimpleNamespace(raw=text,norm=text),{'author':'Тестовый Автор'}
+            common=dict(cleaner=cleaner,features=lambda text:{'words':200,'cyrillic':1})
+            self.assertIsNone(extract_candidate(payload,'https://zavtra.ru/blogs/a','zavtra',**common)[1])
+            self.assertIsNone(extract_candidate(payload,'https://zavtra.ru/blogs/a','zavtra',strict_provenance=True,**common)[0])
+
+    def test_news_reference_does_not_itself_mean_republication(self):
+        self.assertEqual(provenance_warning('Согласно сообщению Reuters, событие произошло вчера. Автор обсуждает его последствия.'),'')
 
 
 if __name__=='__main__':unittest.main()
